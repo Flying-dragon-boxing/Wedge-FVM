@@ -421,8 +421,7 @@ bool Driver::solve(double dt)
     rho += rho_inc;
     u += u_inc;
     v += v_inc;
-    // p += p_inc;
-    bool converge = ( rho_inc.cwiseAbs().maxCoeff() < 3e-5 && u_inc.cwiseAbs().maxCoeff() < 3e-5 && v_inc.cwiseAbs().maxCoeff() < 3e-5 ) || negative_pressure;
+    bool converge = (rho_inc.cwiseAbs().maxCoeff() < threshold && u_inc.cwiseAbs().maxCoeff() < threshold && v_inc.cwiseAbs().maxCoeff() < threshold ) || negative_pressure;
     return converge;
 
     

@@ -67,14 +67,14 @@ Flux Driver::reconstruct_v_l(const State &mm, const State &m, const State &p, co
     double u_pp_n = u_pp * normal.x + v_pp * normal.y, u_pp_t = u_pp * normal.y - v_pp * normal.x;
 
     // apply original variable reconstruction
-    double rho_m = m[0];// + 0.5 * minmod(m[0] - mm[0], p[0] - m[0]);
-    double rho_p = p[0];// - 0.5 * minmod( p[0] - m[0], pp[0] - p[0]);
-    u_m_n = u_m_n + 0.5 * minmod(u_m_n - u_mm_n, u_p_n - u_m_n);
-    u_p_n = u_p_n - 0.5 * minmod(u_p_n - u_m_n, u_pp_n - u_p_n);
-    u_m_t = u_m_t + 0.5 * minmod(u_m_t - u_mm_t, u_p_t - u_m_t);
-    u_p_t = u_p_t - 0.5 * minmod(u_p_t - u_m_t, u_pp_t - u_p_t);
-    double pressure_m = m[3];// + 0.5 * minmod(m[3] - mm[3], p[3] - m[3]);
-    double pressure_p = p[3];// - 0.5 * minmod(p[3] - m[3], pp[3] - p[3]);
+    double rho_m = m[0] + 0.5 * minmod(m[0] - mm[0], p[0] - m[0]);
+    double rho_p = p[0] - 0.5 * minmod( p[0] - m[0], pp[0] - p[0]);
+    // u_m_n = u_m_n;// + 0.5 * minmod(u_m_n - u_mm_n, u_p_n - u_m_n);
+    // u_p_n = u_p_n;// - 0.5 * minmod(u_p_n - u_m_n, u_pp_n - u_p_n);
+    // u_m_t = u_m_t;// + 0.5 * minmod(u_m_t - u_mm_t, u_p_t - u_m_t);
+    // u_p_t = u_p_t;// - 0.5 * minmod(u_p_t - u_m_t, u_pp_t - u_p_t);
+    double pressure_m = m[3] + 0.5 * minmod(m[3] - mm[3], p[3] - m[3]);
+    double pressure_p = p[3] - 0.5 * minmod(p[3] - m[3], pp[3] - p[3]);
 
     a_m = std::sqrt(GAMMA * pressure_m / rho_m);
     a_p = std::sqrt(GAMMA * pressure_p / rho_p);
@@ -149,6 +149,77 @@ Flux Driver::reconstruct_v_l(const State &mm, const State &m, const State &p, co
         flux_m[2] + flux_p[2],
         flux_m[3] + flux_p[3]
     };
+    return flux;
+
+}
+
+Flux Driver::reconstruct_kfvs(const State &mm, const State &m, const State &p, const State &pp, Vec2 normal)
+{
+    // m: minus, p: plus
+    // Here shows how the units are arranged
+    // mm | m | p | pp
+    // normal is ->
+    double u_mm = mm[1], u_m = m[1], u_p = p[1], u_pp = pp[1];
+    double v_mm = mm[2], v_m = m[2], v_p = p[2], v_pp = pp[2];
+    double a_mm = std::sqrt(GAMMA * mm[3] / mm[0]),
+            a_m = std::sqrt(GAMMA * m[3] / m[0]),
+            a_p = std::sqrt(GAMMA * p[3] / p[0]),
+           a_pp = std::sqrt(GAMMA * pp[3] / pp[0]);
+
+    // convert to normal coordinate
+    double u_mm_n = u_mm * normal.x + v_mm * normal.y, u_mm_t = u_mm * normal.y - v_mm * normal.x;
+    double u_m_n = u_m * normal.x + v_m * normal.y, u_m_t = u_m * normal.y - v_m * normal.x;
+    double u_p_n = u_p * normal.x + v_p * normal.y, u_p_t = u_p * normal.y - v_p * normal.x;
+    double u_pp_n = u_pp * normal.x + v_pp * normal.y, u_pp_t = u_pp * normal.y - v_pp * normal.x;
+
+    // apply original variable reconstruction
+    double rho_m = m[0] + 0.5 * minmod(m[0] - mm[0], p[0] - m[0]);
+    double rho_p = p[0] - 0.5 * minmod( p[0] - m[0], pp[0] - p[0]);
+    // u_m_n = u_m_n + 0.5 * minmod(u_m_n - u_mm_n, u_p_n - u_m_n);
+    // u_p_n = u_p_n - 0.5 * minmod(u_p_n - u_m_n, u_pp_n - u_p_n);
+    // u_m_t = u_m_t + 0.5 * minmod(u_m_t - u_mm_t, u_p_t - u_m_t);
+    // u_p_t = u_p_t - 0.5 * minmod(u_p_t - u_m_t, u_pp_t - u_p_t);
+    double pressure_m = m[3] + 0.5 * minmod(m[3] - mm[3], p[3] - m[3]);
+    double pressure_p = p[3] - 0.5 * minmod(p[3] - m[3], pp[3] - p[3]);
+
+    double beta_m = rho_m / 2 / pressure_m;
+    double beta_p = rho_p / 2 / pressure_p;
+
+    double S2_m = u_m_n * std::sqrt(beta_m);
+    double S2_p = u_p_n * std::sqrt(beta_p);
+
+    double X2_m = 0.5 * (1 + std::erf(S2_m));
+    double X2_p = 0.5 * (1 - std::erf(S2_p));
+
+    constexpr double m_pi = 3.14159265358979323846;
+    double Y2_m = std::exp(-S2_m * S2_m) / std::sqrt(m_pi) / 2 / std::sqrt(beta_m);
+    double Y2_p = std::exp(-S2_p * S2_p) / std::sqrt(m_pi) / 2 / std::sqrt(beta_p);
+
+
+    Flux flux_m = {
+        rho_m * u_m_n * X2_m + rho_m * Y2_m,
+        rho_m * u_m_n * u_m_t * X2_m + rho_m * u_m_t * Y2_m,
+        (pressure_m + rho_m * u_m_n * u_m_n) * X2_m + rho_m * u_m_n * Y2_m,
+        (GAMMA / (GAMMA - 1) * pressure_m + 0.5 * rho_m * (u_m_n * u_m_n + u_m_t * u_m_t)) * u_m_n * X2_m 
+        + ((GAMMA + 1) / (2 * (GAMMA - 1)) * pressure_m + 0.5 * rho_m * (u_m_n * u_m_n + u_m_t * u_m_t)) * Y2_m
+        
+    };
+
+    Flux flux_p = {
+        rho_p * u_p_n * X2_p - rho_p * Y2_p,
+        rho_p * u_p_n * u_p_t * X2_p - rho_p * u_p_t * Y2_p,
+        (pressure_p + rho_p * u_p_n * u_p_n) * X2_p - rho_p * u_p_n * Y2_p,
+        (GAMMA / (GAMMA - 1) * pressure_p + 0.5 * rho_p * (u_p_n * u_p_n + u_p_t * u_p_t)) * u_p_n * X2_p 
+        - ((GAMMA + 1) / (2 * (GAMMA - 1)) * pressure_p + 0.5 * rho_p * (u_p_n * u_p_n + u_p_t * u_p_t)) * Y2_p
+    };
+
+    Flux flux = {
+        flux_m[0] + flux_p[0],
+        flux_m[1] + flux_p[1],
+        flux_m[2] + flux_p[2],
+        flux_m[3] + flux_p[3]
+    };
+
     return flux;
 
 }
@@ -369,7 +440,7 @@ void Driver::calculate_flux()
     {
         for (int j = 2; j < ny + 2; j++)
         {
-            bool at_boundary = j < 4 || j > ny - 1 || i < 4 || i > nx - 1;
+            bool at_boundary = j < 3 || j > ny;
             // n average
             {
                 double u_n = u(i, j);
@@ -388,8 +459,10 @@ void Driver::calculate_flux()
                 // fluxes[i][j].n = {rho_n * u_normal, rho_n * u_normal * u_tangent, rho_n * u_normal * u_normal + p_n, u_normal*(e + p_n)};
                 if (at_boundary)
                     fluxes[i][j].n = reconstruct_roe_boundary(get_state(i, j-1), get_state(i, j), get_state(i, j+1), get_state(i, j+2), n_normal);
-                else if (use_roe)
+                else if (scheme == "roe")
                     fluxes[i][j].n = reconstruct_roe(get_state(i, j-1), get_state(i, j), get_state(i, j+1), get_state(i, j+2), n_normal);
+                else if (scheme == "kfvs")
+                    fluxes[i][j].n = reconstruct_kfvs(get_state(i, j-1), get_state(i, j), get_state(i, j+1), get_state(i, j+2), n_normal);
                 else
                     fluxes[i][j].n = reconstruct_v_l(get_state(i, j-1), get_state(i, j), get_state(i, j+1), get_state(i, j+2), n_normal);
             }
@@ -412,8 +485,10 @@ void Driver::calculate_flux()
                 // fluxes[i][j].e = {rho_e * u_normal, rho_e * u_normal * u_tangent, rho_e * u_normal * u_normal + p_e, u_normal*(e + p_e)};
                 if (at_boundary)
                     fluxes[i][j].e = reconstruct_roe_boundary(get_state(i-1, j), get_state(i, j), get_state(i+1, j), get_state(i+2, j), e_normal);
-                else if (use_roe)
+                else if (scheme == "roe")
                     fluxes[i][j].e = reconstruct_roe(get_state(i-1, j), get_state(i, j), get_state(i+1, j), get_state(i+2, j), e_normal);
+                else if (scheme == "kfvs")
+                    fluxes[i][j].e = reconstruct_kfvs(get_state(i-1, j), get_state(i, j), get_state(i+1, j), get_state(i+2, j), e_normal);
                 else
                     fluxes[i][j].e = reconstruct_v_l(get_state(i-1, j), get_state(i, j), get_state(i+1, j), get_state(i+2, j), e_normal);
             
@@ -437,8 +512,10 @@ void Driver::calculate_flux()
                 // fluxes[i][j].s = {rho_s * u_normal, rho_s * u_normal * u_tangent, rho_s * u_normal * u_normal + p_s, u_normal*(e + p_s)};
                 if (at_boundary)
                     fluxes[i][j].s = reconstruct_roe_boundary(get_state(i, j+1), get_state(i, j), get_state(i, j-1), get_state(i, j-2), s_normal);
-                else if (use_roe)
+                else if (scheme == "roe")
                     fluxes[i][j].s = reconstruct_roe(get_state(i, j+1), get_state(i, j), get_state(i, j-1), get_state(i, j-2), s_normal);
+                else if (scheme == "kfvs")
+                    fluxes[i][j].s = reconstruct_kfvs(get_state(i, j+1), get_state(i, j), get_state(i, j-1), get_state(i, j-2), s_normal);
                 else
                     fluxes[i][j].s = reconstruct_v_l(get_state(i, j+1), get_state(i, j), get_state(i, j-1), get_state(i, j-2), s_normal);
 
@@ -462,8 +539,10 @@ void Driver::calculate_flux()
                 // fluxes[i][j].w = {rho_w * u_normal, rho_w * u_normal * u_tangent, rho_w * u_normal * u_normal + p_w, u_normal*(e + p_w)};
                 if (at_boundary)
                     fluxes[i][j].w = reconstruct_roe_boundary(get_state(i+1, j), get_state(i, j), get_state(i-1, j), get_state(i-2, j), w_normal);
-                else if (use_roe)
+                else if (scheme == "roe")
                     fluxes[i][j].w = reconstruct_roe(get_state(i+1, j), get_state(i, j), get_state(i-1, j), get_state(i-2, j), w_normal);
+                else if (scheme == "kfvs")
+                    fluxes[i][j].w = reconstruct_kfvs(get_state(i+1, j), get_state(i, j), get_state(i-1, j), get_state(i-2, j), w_normal);
                 else
                     fluxes[i][j].w = reconstruct_v_l(get_state(i+1, j), get_state(i, j), get_state(i-1, j), get_state(i-2, j), w_normal);
             }

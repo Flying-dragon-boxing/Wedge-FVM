@@ -23,7 +23,7 @@ ma = np.sqrt(u ** 2 + v ** 2) / np.sqrt(gamma * p / rho)
 
 
 plt.contourf(x, y, p, levels=100)
-# plt.imshow(p)
+plt.imshow(p)
 
 plt.colorbar()
 plt.axis('equal')
@@ -36,10 +36,13 @@ x_end = 1 + 2.4 / np.tan(np.deg2rad(45.3436167))
 plt.plot([1, x_end], [0, 2.4], 'cyan', linewidth=1, linestyle='--')
 plt.legend(['Analytical Shockwave position'])
 
-print("Pressure Ratio before and after shockwave: ", p[4,:].max() / p[4,:].min())
+nx = p.shape[0]
+ny = p.shape[1]
+
+print("Pressure Ratio before and after shockwave: ", p[:,int(nx*11/16)].max() / p[:,int(nx*1/8)].max())
 
 plt.savefig('Pressure.png')
-# plt.show()
+plt.show()
 
 plt.close()
 
@@ -57,7 +60,7 @@ x_end = 1 + 2.4 / np.tan(np.deg2rad(45.3436167))
 plt.plot([1, x_end], [0, 2.4], 'cyan', linewidth=1, linestyle='--')
 plt.legend(['Analytical Shockwave position'])
 
-print("Mach Number after shockwave: ", ma[4,:].min())
+print("Mach Number after shockwave: ", ma[8,:].min())
 
 plt.savefig('Mach.png')
 

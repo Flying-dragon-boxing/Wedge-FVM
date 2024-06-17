@@ -20,21 +20,24 @@ int main(int argc, char *argv[])
 
         if (FluxMethod == "vl")
         {
-            driver.use_roe = false;
+            driver.scheme = "vl";
         }
         else if(FluxMethod == "roe")
         {
-            driver.use_roe = true;
+            driver.scheme = "roe";
+        }
+        else if(FluxMethod == "kfvs")
+        {
+            driver.scheme = "kfvs";
         }
         else
         {
             std::cout << "Invalid flux method. Using Roe's method." << std::endl;
         }
     }
-    
 
-    bool save_roe = driver.use_roe;
-
+    std::string save_scheme = driver.scheme;
+    driver.threshold = 7e-5;
     driver.apply_initial_conditions();
     driver.apply_boundary_conditions();
     driver.dt = 5e-4;
@@ -42,13 +45,13 @@ int main(int argc, char *argv[])
     int cnt = 0;
     while(!converge && cnt < cnt_input)
     {
-        if (cnt < 8000)
+        if (cnt < 4000)
         {
-            driver.use_roe = true;
+            driver.scheme = "roe";
         }
         else
         {
-            driver.use_roe = save_roe;
+            driver.scheme = save_scheme;
             if (cnt % 500 == 0)
             {
                 driver.epsilon *= 0.1;

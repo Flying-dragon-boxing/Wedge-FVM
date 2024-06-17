@@ -1,4 +1,5 @@
 #include <Eigen/Dense>
+#include <string>
 #include <vector>
 
 typedef std::array<double, 4> Flux;
@@ -35,12 +36,14 @@ struct Driver
     int nx, ny;
     double dt = 1e-2;
     double epsilon = 0.08;
+    double threshold = 8e-5;
 
     Eigen::MatrixXd rho, u, v, p;
 
     std::vector<std::vector<Node>> fluxes;
 
-    bool use_roe = true;
+    // bool use_roe = true;
+    std::string scheme = "roe";
 
     void calculate_flux();
     void apply_boundary_conditions();
@@ -48,6 +51,7 @@ struct Driver
     void add_viscosity();
     double entropy_abs(const double &a, const double &b, const double &c);
     Flux reconstruct_v_l(const State &mm, const State &m, const State &p, const State &pp, Vec2 normal);
+    Flux reconstruct_kfvs(const State &mm, const State &m, const State &p, const State &pp, Vec2 normal);
     Flux reconstruct_roe(const State &mm, const State &m, const State &p, const State &pp, Vec2 normal);
     Flux reconstruct_roe_boundary(const State &mm, const State &m, const State &p, const State &pp, Vec2 normal);
     State get_state(int i, int j) {return {rho(i, j), u(i, j), v(i, j), p(i, j)};};

@@ -1,2 +1,2 @@
-Pressure Ratio before and after shockwave:  2.1713623846122534
-Mach Number after shockwave:  1.4326779051564267
+Pressure Ratio before and after shockwave:  2.205398473437763
+Mach Number after shockwave:  1.4334660698992898
