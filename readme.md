@@ -1,3 +1,7 @@
+**English Version**: 
+
+This is a finite volume method solver for supersonic flow over a wedge based on structured mesh. Van Leer, Roe and KFVS scheme have been used for calculating the fluxes. 
+
 # 计算流体力学 期末大作业 程序文档
 
 ## 1. 项目依赖
